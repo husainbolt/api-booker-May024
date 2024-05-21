@@ -17,10 +17,11 @@ public class CreateBookingTest {
 //given - all inputs [URI, headers, path/query parameters, payload]	
 //when - submit api [headers/endpoint]
 //then - validate
-	
+
 	CreateBookingRequest payload;
 	String token;
 	int bookingid;
+	Bookingdates dates;
 
 	@BeforeMethod
 	void generateBooking() {
@@ -68,7 +69,7 @@ public class CreateBookingTest {
 	public void createBookingTestWithPojo() {
 
 		payload = new CreateBookingRequest();
-		Bookingdates dates = new Bookingdates();
+		dates = new Bookingdates();
 		dates.setCheckin("2018-01-01");
 		dates.setCheckout("2019-01-01");
 		payload.setFirstname("Bukayo");
@@ -77,16 +78,15 @@ public class CreateBookingTest {
 		payload.setDepositpaid(true);
 		payload.setBookingdates(dates);
 		payload.setAdditionalneeds("breakfast");
-		
 
 		Response res = RestAssured.given().headers("Content-Type", "application/json")
 				.headers("Accept", "application/json").body(payload).log().all().when().post("/booking");
 		bookingid = res.jsonPath().getInt("bookingid");
 		System.out.println(bookingid);
-		Assert.assertEquals(res.getStatusCode(), StatusCode.OK);		
+		Assert.assertEquals(res.getStatusCode(), StatusCode.OK);
 		Assert.assertTrue(bookingid > 0);
 		validateResponse(res, payload, "booking.");
-		
+
 	}
 
 	@Test(priority = 1, enabled = false)
@@ -97,37 +97,78 @@ public class CreateBookingTest {
 		System.out.println(listOfBookingsids.size());
 		Assert.assertTrue(listOfBookingsids.contains(bookingid));
 	}
-	
+
 	@Test(priority = 2, enabled = false)
 	public void getBookingID() {
-		Response res = RestAssured.given().headers("Accept", "application/json").log().all().when().get("/booking/"+bookingid);
+		Response res = RestAssured.given().headers("Accept", "application/json").log().all().when()
+				.get("/booking/" + bookingid);
 		Assert.assertEquals(res.getStatusCode(), StatusCode.OK);
 		System.out.println(res.asPrettyString());
 		validateResponse(res, payload, "");
 	}
-	
+
 	@Test()
 	public void getBookingIDWithDeserialization() {
-		Response res = RestAssured.given().headers("Accept", "application/json").log().all().when().get("/booking/"+bookingid);
+		Response res = RestAssured.given().headers("Accept", "application/json").log().all().when()
+				.get("/booking/" + bookingid);
 		Assert.assertEquals(res.getStatusCode(), StatusCode.OK);
 		System.out.println(res.asPrettyString());
 		CreateBookingRequest responseBody = res.as(CreateBookingRequest.class);
-		//Assert.assertEquals(payload.firstname, responseBody.firstname);
-		//Assert.assertEquals(payload.lastname, responseBody.lastname);
+		// Assert.assertEquals(payload.firstname, responseBody.firstname);
+		// Assert.assertEquals(payload.lastname, responseBody.lastname);
 		Assert.assertTrue(payload.equals(responseBody));
 	}
-	
-	private void validateResponse(Response res, CreateBookingRequest payload, String object) {
-		
-		Assert.assertEquals(res.jsonPath().getString(object+"firstname"), payload.getFirstname());
-		Assert.assertEquals(res.jsonPath().getString(object+"lastname"), payload.getLastname());
-		Assert.assertEquals(res.jsonPath().getInt(object+"totalprice"), payload.getTotalprice());
-		Assert.assertEquals(res.jsonPath().getString(object+"additionalneeds"), payload.getAdditionalneeds());
-		Assert.assertEquals(res.jsonPath().getBoolean(object+"depositpaid"), payload.isDepositpaid());
-		Assert.assertEquals(res.jsonPath().get(object+"bookingdates.checkin"), payload.getBookingdates().getCheckin());
-		Assert.assertEquals(res.jsonPath().get(object+"bookingdates.checkout"), payload.getBookingdates().getCheckout());
 
-		
+	private void validateResponse(Response res, CreateBookingRequest payload, String object) {
+
+		Assert.assertEquals(res.jsonPath().getString(object + "firstname"), payload.getFirstname());
+		Assert.assertEquals(res.jsonPath().getString(object + "lastname"), payload.getLastname());
+		Assert.assertEquals(res.jsonPath().getInt(object + "totalprice"), payload.getTotalprice());
+		Assert.assertEquals(res.jsonPath().getString(object + "additionalneeds"), payload.getAdditionalneeds());
+		Assert.assertEquals(res.jsonPath().getBoolean(object + "depositpaid"), payload.isDepositpaid());
+		Assert.assertEquals(res.jsonPath().get(object + "bookingdates.checkin"),
+				payload.getBookingdates().getCheckin());
+		Assert.assertEquals(res.jsonPath().get(object + "bookingdates.checkout"),
+				payload.getBookingdates().getCheckout());
+
+	}
+
+	@Test(priority = 3)
+	public void updateBookingIdTest() {
+		payload.setFirstname("Mesut");
+		Response res = RestAssured.given().headers("Accept", "application/json")
+				.headers("Content-Type", "application/json").headers("Cookie", "token=" + token).log().all()
+				.body(payload).when().put("/booking/" + bookingid);
+		Assert.assertEquals(res.getStatusCode(), StatusCode.OK);
+		System.out.println(res.asPrettyString());
+		CreateBookingRequest responseBody = res.as(CreateBookingRequest.class);
+		// Assert.assertEquals(payload.firstname, responseBody.firstname);
+		// Assert.assertEquals(payload.lastname, responseBody.lastname);
+		Assert.assertTrue(payload.equals(responseBody));
+
+	}
+
+	@Test(priority = 4)
+	public void partialUpdateBookingIdTest() {
+		payload.setAdditionalneeds("Lunch");
+		dates.setCheckout("2020-12-12");
+		Response res = RestAssured.given().headers("Content-Type", "application/json")
+				.headers("Cookie", "token=" + token).log().all().body(payload).when().patch("/booking/" + bookingid);
+		System.out.println(res.asPrettyString());
+		CreateBookingRequest responseBody = res.as(CreateBookingRequest.class);
+		Assert.assertTrue(payload.equals(responseBody));
+	}
+
+	@Test(priority = 5)
+	public void deleteBookingIdTest() {
+		Response res = RestAssured.given().headers("Content-Type", "application/json")
+				.headers("Cookie", "token=" + token).log().all().when().delete("/booking/" + bookingid);
+		Assert.assertEquals(res.getStatusCode(), StatusCode.CREATED);
+		res = RestAssured.given().headers("Accept", "application/json").log().all().when().get("/booking");
+		Assert.assertEquals(res.getStatusCode(), StatusCode.OK);
+		List<Integer> listOfBookingsids = res.jsonPath().getList("bookingid");
+		Assert.assertFalse(listOfBookingsids.contains(bookingid));
+
 	}
 
 }
